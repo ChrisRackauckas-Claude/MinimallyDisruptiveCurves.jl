@@ -15,4 +15,10 @@ const GROUP = get(ENV, "GROUP", "All")
             include("alloc_tests.jl")
         end
     end
+
+    if GROUP == "All" || GROUP == "ExplicitImports"
+        @testset "Explicit Imports" begin
+            include("explicit_imports.jl")
+        end
+    end
 end
