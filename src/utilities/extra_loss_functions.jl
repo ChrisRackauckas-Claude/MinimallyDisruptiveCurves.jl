@@ -14,7 +14,7 @@ with output map g(x), this turns into
 int_u  sum(dgdx(u)*pprob.f(u) - dgdx(u)*prob.f(u)).^2
 """
 function build_injection_loss(prob::ODEProblem, solmethod::T, tpoints,
-        output_map = x -> x) where {T <: DiffEqBase.AbstractODEAlgorithm}
+        output_map = x -> x) where {T <: SciMLBase.AbstractODEAlgorithm}
     pdim = length(prob.u0)
     nom_sol = Array(solve(prob, solmethod, saveat = tpoints))
     n = length(tpoints)

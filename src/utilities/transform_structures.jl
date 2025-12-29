@@ -98,18 +98,20 @@ end
 """
     new_od = transform_ODESystem(od::ODESystem, tr::TransformationStructure)
 
-    - reparameterises the parameters of an ODE system via the transformation tr. 
+    - reparameterises the parameters of an ODE system via the transformation tr.
     - within the ODE eqs, any instance of a parameter p is replaced with tr.inv_p_transform(p)
     - if there are default parameter values p0, they are changed to tr.p_transform(p0)
 """
 function transform_ODESystem(od::ModelingToolkit.AbstractSystem, tr::TransformationStructure)
     t = independent_variable(od)
-    unames = states(od) .|> Num
+    unames = unknowns(od) .|> Num
     eqs = equations(od)
     ps = parameters(od) .|> Num
     new_ps = transform_names(ps, tr) # modified names under transformation
 
-    of = ODEFunction(od, eval_expression = false) # to solve world age issues
+    # ModelingToolkit v9+ requires structural_simplify before ODEFunction
+    od_simplified = structural_simplify(od)
+    of = ODEFunction(od_simplified, eval_expression = false) # to solve world age issues
     rhs = similar(unames, eltype(unames))
     of(rhs, unames, tr.inv_p_transform(new_ps), t) # in place modification of rhs
     lhs = [el.lhs for el in eqs]
@@ -142,7 +144,7 @@ function transform_problem(prob::ODEProblem, tr::TransformationStructure; unames
     sys = modelingtoolkitize(prob)
     eqs = ModelingToolkit.get_eqs(sys)
     pname_tr = parameters(sys) .=> pnames
-    uname_tr = states(sys) .=> unames
+    uname_tr = unknowns(sys) .=> unames
     neweqs = eqs
     if !(pnames === nothing)
         neweqs = [el.lhs ~ substitute(el.rhs, pname_tr) for el in neweqs]
@@ -154,14 +156,14 @@ function transform_problem(prob::ODEProblem, tr::TransformationStructure; unames
         neweqs = [substitute(el.lhs, uname_tr) ~ substitute(el.rhs, uname_tr)
                   for el in neweqs]
     else
-        unames = ModelingToolkit.get_states(sys)
+        unames = ModelingToolkit.unknowns(sys)
     end
     named_sys = ODESystem(neweqs, ModelingToolkit.get_iv(sys), unames, pnames,
         defaults = merge(Dict(unames .=> prob.u0), Dict(pnames .=> prob.p)),
         name = nameof(sys))
     newp0 = tr.p_transform(prob.p)
     t_sys = transform_ODESystem(named_sys, tr)
-    return t_sys, (ModelingToolkit.get_states(t_sys) .=> prob.u0),
+    return t_sys, (ModelingToolkit.unknowns(t_sys) .=> prob.u0),
     (ModelingToolkit.get_ps(t_sys) .=> newp0)
 end
 

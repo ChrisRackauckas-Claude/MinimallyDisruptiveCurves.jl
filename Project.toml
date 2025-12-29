@@ -1,9 +1,10 @@
 name = "MinimallyDisruptiveCurves"
 uuid = "c6328df5-4af8-4637-a9e9-78ed74a2ae2b"
-authors = ["Dhruva Venkita Raman"]
 version = "0.3.3"
+authors = ["Dhruva Venkita Raman"]
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -16,18 +17,21 @@ SteadyStateDiffEq = "9672c7b4-1e72-59bd-8a11-6ac3964bc41f"
 ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
 
 [compat]
-DiffEqCallbacks = "2.16, 3"
+BenchmarkTools = "1.6.3"
+DiffEqCallbacks = "2.16, 3, 4"
 FiniteDiff = "2.8"
 ForwardDiff = "0.10"
-ModelingToolkit = "8.0"
-OrdinaryDiffEq = "6.0"
-RecipesBase = "1.0"
+ModelingToolkit = "8, 9"
+OrdinaryDiffEq = "6, 7"
+RecipesBase = "1"
 SciMLBase = "2"
 SteadyStateDiffEq = "2"
 ThreadsX = "0.1.8"
 julia = "1.10"
 
 [extras]
+AllocCheck = "9b6a8646-f879-5781-a5e9-49f6ffe57ee8"
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CPUSummary = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 DiffEqParamEstim = "1130ab10-4a5a-5621-a13d-e4788d82bd4c"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -38,4 +42,4 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "DiffEqParamEstim", "ForwardDiff", "ModelingToolkit", "OrdinaryDiffEq", "SafeTestsets", "Symbolics"]
+test = ["AllocCheck", "BenchmarkTools", "Test", "DiffEqParamEstim", "ForwardDiff", "ModelingToolkit", "OrdinaryDiffEq", "SafeTestsets", "Symbolics"]

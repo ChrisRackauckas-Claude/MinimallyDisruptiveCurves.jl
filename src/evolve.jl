@@ -15,7 +15,7 @@ function evolve(c::CurveProblem, solmethod = Tsit5; mdc_callback = CallbackCalla
         elseif length(ens) == 2
             t = cat(-ens[1].t[end:-1:1], ens[2].t, dims = 1)
             u = cat(ens[1].u[end:-1:1], ens[2].u, dims = 1)
-            return DiffEqBase.build_solution(p, Tsit5(), t, u)
+            return SciMLBase.build_solution(p, Tsit5(), t, u)
         end
     end
 
