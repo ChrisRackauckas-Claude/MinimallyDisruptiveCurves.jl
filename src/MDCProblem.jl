@@ -120,20 +120,39 @@ function dynamics(c::CurveProblem, ::MDCDynamics)
     N = num_params(c)
     H = c.momentum
     θ₀ = initial_params(c)
+    # Pre-allocate temporary array for θ - θ₀ computation
+    diff_θ = similar(θ₀)
     function upd(du, u, p, t)
-        θ = u[1:N] # current parameter vector
-        λ = u[(N + 1):end] # current costate vector
-        dist = sum((θ - θ₀) .^ 2) # which should = t so investigate cost/benefits of using t instead of dist
+        θ = @view u[1:N] # current parameter vector (view, no allocation)
+        λ = @view u[(N + 1):end] # current costate vector (view, no allocation)
+        dθ = @view du[1:N]
+        dλ = @view du[(N + 1):end]
+
+        # Compute θ - θ₀ in-place
+        @. diff_θ = θ - θ₀
+        dist = sum(abs2, diff_θ) # Use abs2 instead of .^ 2 for efficiency
         C = cost(θ, ∇C) # also updates ∇C as a mutable
         μ2 = (C - H) / 2
-        μ1 = dist > 1e-3 ? (λ' * λ - 4 * μ2^2) / (λ' * (θ - θ₀)) : 0.0
-        # if mu1 < -1e-4 warn of numerical issue
-        # if mu1 > 1e-3 and dist > 1e-3 then set mu1 = 0
-        du[1:N] = @. (-λ + μ1 * (θ - θ₀)) / (2 * μ2) # ie dθ
-        du[1:N] /= (sqrt(sum((du[1:N]) .^ 2)))
-        damping_constant = (λ' * du[1:N]) / (H - C)  # theoretically = 1 but not numerically
-        du[(N + 1):end] = @. (μ1 * du[1:N] - ∇C) * damping_constant # ie dλ
-        res = λ + 2 * μ2 * du[1:N]
+
+        # Compute dot products without allocation
+        λ_dot_λ = dot(λ, λ)
+        λ_dot_diff = dot(λ, diff_θ)
+        μ1 = dist > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+
+        # Compute dθ in-place
+        inv_2μ2 = 1 / (2 * μ2)
+        @. dθ = (-λ + μ1 * diff_θ) * inv_2μ2
+
+        # Normalize dθ in-place
+        dθ_norm = sqrt(sum(abs2, dθ))
+        @. dθ /= dθ_norm
+
+        # Compute damping constant
+        damping_constant = dot(λ, dθ) / (H - C)
+
+        # Compute dλ in-place
+        @. dλ = (μ1 * dθ - ∇C) * damping_constant
+
         return nothing
     end
     return upd
@@ -147,7 +166,8 @@ function (t::TerminalCond)(c::CurveProblem)
     H = c.momentum
     N = num_params(c)
     function condition(u, t, integrator)
-        return (cost(u[1:N]) > H)
+        θ = @view u[1:N]
+        return (cost(θ) > H)
     end
     return DiscreteCallback(condition, terminate!)
 end
@@ -176,7 +196,8 @@ end
 function build_cond(c::CurveProblem, ::CostCondition, tol)
     N = num_params(c)
     function costcond(u, t, integ)
-        (c.cost(u[1:N]) > tol) ? (return true) : (return false)
+        θ = @view u[1:N]
+        return c.cost(θ) > tol
     end
     return costcond
 end
@@ -195,41 +216,79 @@ function dHdu_residual(c::CurveProblem, u, t, integ, ::MDCDynamics)
     H = c.momentum
     θ₀ = initial_params(c)
 
-    θ = u[1:N]
-    λ = u[(N + 1):end]
+    θ = @view u[1:N]
+    λ = @view u[(N + 1):end]
     μ2 = (c.cost(θ) - H) / 2.0
-    μ1 = t > 1e-3 ? (λ' * λ - 4 * μ2^2) / (λ' * (θ - θ₀)) : 0.0
 
-    # dθ = SciMLBase.get_tmp_cache(integ)[1][1:N]
-    dθ = (-λ + μ1 * (θ - θ₀)) / (2 * μ2)
-    dθ /= (sqrt(sum((dθ) .^ 2)))
-    return sum(abs.(λ + 2 * μ2 * dθ))
+    # Compute dot products without allocations
+    λ_dot_λ = dot(λ, λ)
+    diff_sum = zero(eltype(u))
+    λ_dot_diff = zero(eltype(u))
+    @inbounds for i in 1:N
+        diff_i = θ[i] - θ₀[i]
+        λ_dot_diff += λ[i] * diff_i
+    end
+    μ1 = t > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+
+    # Compute residual without allocating dθ - we compute the sum directly
+    inv_2μ2 = 1 / (2 * μ2)
+    dθ_norm_sq = zero(eltype(u))
+    @inbounds for i in 1:N
+        diff_i = θ[i] - θ₀[i]
+        dθ_i = (-λ[i] + μ1 * diff_i) * inv_2μ2
+        dθ_norm_sq += dθ_i * dθ_i
+    end
+    dθ_norm = sqrt(dθ_norm_sq)
+
+    # Compute residual sum: sum(abs(λ + 2 * μ2 * dθ_normalized))
+    residual = zero(eltype(u))
+    @inbounds for i in 1:N
+        diff_i = θ[i] - θ₀[i]
+        dθ_i = (-λ[i] + μ1 * diff_i) * inv_2μ2 / dθ_norm
+        residual += abs(λ[i] + 2 * μ2 * dθ_i)
+    end
+    return residual
 end
 
 """
     build_affect(c::MDCProblem, ::CostateAffect)
 
 Resets costate to undo effect of cumulative numerical error. Specifically, finds costate so that dHdu = 0, where H is the Hamiltonian.
-
-*I wanted to put dθ[:] = ... here instead of dθ = ... . Somehow the output of the MDC changes each time if I do that, there is a dirty state being transmitted. But I don't at all see how from the code. Figure out.*
 """
 function build_affect(c::CurveProblem, ::CostateAffect, ::MDCDynamics)
     N = num_params(c)
     H = c.momentum
     θ₀ = initial_params(c)
-    dp = param_template(c)
-    function reset_costate!(integ, dθ)
-        θ = integ.u[1:N] # current parameter vector
-        λ = integ.u[(N + 1):end] # current costate vector 
+    # Pre-allocate temporary array for dθ computation
+    dθ_temp = param_template(c)
+    diff_θ = param_template(c)
+    function reset_costate!(integ)
+        θ = @view integ.u[1:N]
+        λ = @view integ.u[(N + 1):end]
+        λ_out = @view integ.u[(N + 1):end]
+
         μ2 = (c.cost(θ) - H) / 2
-        μ1 = integ.t > 1e-3 ? (λ' * λ - 4 * μ2^2) / (λ' * (θ - θ₀)) : 0.0
-        # dθ = SciMLBase.get_tmp_cache(integ)[1][1:N] 
-        dθ = (-λ + μ1 * (θ - θ₀)) / (2 * μ2)
-        dθ /= (sqrt(sum((dθ) .^ 2)))
-        integ.u[(N + 1):end] = -2 * μ2 * dθ
+
+        # Compute diff_θ and dot products without allocations
+        @. diff_θ = θ - θ₀
+        λ_dot_λ = dot(λ, λ)
+        λ_dot_diff = dot(λ, diff_θ)
+        μ1 = integ.t > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+
+        # Compute dθ in-place
+        inv_2μ2 = 1 / (2 * μ2)
+        @. dθ_temp = (-λ + μ1 * diff_θ) * inv_2μ2
+
+        # Normalize dθ
+        dθ_norm = sqrt(sum(abs2, dθ_temp))
+        @. dθ_temp /= dθ_norm
+
+        # Update costate in-place
+        @. λ_out = -2 * μ2 * dθ_temp
+
         return integ
     end
-    return integ -> reset_costate!(integ, dp)
+    return reset_costate!
 end
 
 """
