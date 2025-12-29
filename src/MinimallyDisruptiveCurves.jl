@@ -1,8 +1,18 @@
 module MinimallyDisruptiveCurves
 
-using SciMLBase, DiffEqCallbacks, OrdinaryDiffEq
-using FiniteDiff, LinearAlgebra, ModelingToolkit, ForwardDiff
-using RecipesBase, ThreadsX
+using DiffEqCallbacks: DiffEqCallbacks, FunctionCallingCallback, PresetTimeCallback,
+                       SavedValues, SavingCallback
+using FiniteDiff: FiniteDiff
+using ForwardDiff: ForwardDiff
+using LinearAlgebra: LinearAlgebra, I, diagm, dot, norm, svd
+using ModelingToolkit: ModelingToolkit, Num, ODEFunction, ODEProblem, ODESystem,
+                       Variable, equations, independent_variable, modelingtoolkitize,
+                       parameters, structural_simplify, substitute, unknowns
+using OrdinaryDiffEq: OrdinaryDiffEq, CallbackSet, DiscreteCallback, EnsembleProblem,
+                      EnsembleThreads, Tsit5, remake, solve, terminate!
+using RecipesBase: RecipesBase, @recipe, @series
+using SciMLBase: SciMLBase
+using ThreadsX: ThreadsX
 
 include("MDCTypes.jl")
 include("MDCProblem.jl")
