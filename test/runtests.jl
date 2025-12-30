@@ -21,4 +21,10 @@ const GROUP = get(ENV, "GROUP", "All")
             include("explicit_imports.jl")
         end
     end
+
+    if GROUP == "All" || GROUP == "JET"
+        @testset "JET Static Analysis" begin
+            include("jet_tests.jl")
+        end
+    end
 end
