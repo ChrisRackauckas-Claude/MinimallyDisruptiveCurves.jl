@@ -11,12 +11,13 @@ struct MDCProblem{A, B, C, D, E} <: CurveProblem
     tspan::E
     ## reverse initial direction and signflip curve span if the latter is nonpositive
     function MDCProblem(
-            a::A, b::B, c::C, d::D, e::E) where {A} where {B} where {C} where {D} where {E}
+            a::A, b::B, c::C, d::D, e::E
+        ) where {A} where {B} where {C} where {D} where {E}
         if max(e...) <= 0.0
             e = map(x -> -x |> abs, e) |> reverse
             c = -c
         end
-        new{A, B, C, D, E}(a, b, c, d, e)
+        return new{A, B, C, D, E}(a, b, c, d, e)
     end
 end
 isjumped(c::MDCProblem) = ZeroStart()
@@ -39,21 +40,22 @@ DEPRECATED. use MDCproblem
 """
 specify_curve(cost, p0, dp0, momentum, tspan) = curveProblem(cost, p0, dp0, momentum, tspan)
 function specify_curve(;
-        cost = nothing, p0 = nothing, dp0 = nothing, momentum = nothing, tspan = nothing)
-    curveProblem(cost, p0, dp0, momentum, tspan)
+        cost = nothing, p0 = nothing, dp0 = nothing, momentum = nothing, tspan = nothing
+    )
+    return curveProblem(cost, p0, dp0, momentum, tspan)
 end
 
 """
     Callback to readjust momentum in the case that the numerical residual from the identity dHdu = 0 crosses a user-specified threshold
 """
 function (m::MomentumReadjustment)(c::CurveProblem)
-    readjustment(c, ResidualCondition(), CostateAffect(), m.tol, m.verbose)
+    return readjustment(c, ResidualCondition(), CostateAffect(), m.tol, m.verbose)
 end
 """
     Callback to readjust state in the case that the numerical residual from the identity dHdu = 0 crosses a user-specified threshold. EXPERIMENTAL AND WILL PROBABLY BREAK
 """
 function (m::StateReadjustment)(c::CurveProblem)
-    readjustment(c, ResidualCondition(), StateAffect(), m.tol, m.verbose)
+    return readjustment(c, ResidualCondition(), StateAffect(), m.tol, m.verbose)
 end
 
 """
@@ -137,7 +139,7 @@ function dynamics(c::CurveProblem, ::MDCDynamics)
         # Compute dot products without allocation
         λ_dot_λ = dot(λ, λ)
         λ_dot_diff = dot(λ, diff_θ)
-        μ1 = dist > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+        μ1 = dist > 1.0e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
 
         # Compute dθ in-place
         inv_2μ2 = 1 / (2 * μ2)
@@ -173,7 +175,8 @@ function (t::TerminalCond)(c::CurveProblem)
 end
 
 function readjustment(
-        c::CurveProblem, cnd::ConditionType, aff::AffectType, momentum_tol, verbose::Bool)
+        c::CurveProblem, cnd::ConditionType, aff::AffectType, momentum_tol, verbose::Bool
+    )
     if isnan(momentum_tol)
         return nothing
     end
@@ -185,10 +188,10 @@ end
 function build_cond(c::CurveProblem, ::ResidualCondition, tol, ::MDCDynamics)
     function rescond(u, t, integ)
         absres = dHdu_residual(c, u, t, integ)
-        absres > tol ? begin
-            # @info "applying readjustment at t=$t, |res| = $absres"
-            return true
-        end : return false
+        return absres > tol ? begin
+                # @info "applying readjustment at t=$t, |res| = $absres"
+                return true
+            end : return false
     end
     return rescond
 end
@@ -228,7 +231,7 @@ function dHdu_residual(c::CurveProblem, u, t, integ, ::MDCDynamics)
         diff_i = θ[i] - θ₀[i]
         λ_dot_diff += λ[i] * diff_i
     end
-    μ1 = t > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+    μ1 = t > 1.0e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
 
     # Compute residual without allocating dθ - we compute the sum directly
     inv_2μ2 = 1 / (2 * μ2)
@@ -273,7 +276,7 @@ function build_affect(c::CurveProblem, ::CostateAffect, ::MDCDynamics)
         @. diff_θ = θ - θ₀
         λ_dot_λ = dot(λ, λ)
         λ_dot_diff = dot(λ, diff_θ)
-        μ1 = integ.t > 1e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
+        μ1 = integ.t > 1.0e-3 ? (λ_dot_λ - 4 * μ2^2) / λ_dot_diff : 0.0
 
         # Compute dθ in-place
         inv_2μ2 = 1 / (2 * μ2)
@@ -339,8 +342,10 @@ end
 
 function saving_callback(prob::ODEProblem, saved_values::SavedValues)
     # save states in case simulation is interrupted
-    saving_cb = SavingCallback((u, t, integrator) -> u[1:(length(u) ÷ 2)],
-        saved_values, saveat = 0.0:0.1:prob.tspan[end])
+    saving_cb = SavingCallback(
+        (u, t, integrator) -> u[1:(length(u) ÷ 2)],
+        saved_values, saveat = 0.0:0.1:prob.tspan[end]
+    )
     return remake(prob, callback = saving_cb)
 end
 
@@ -351,8 +356,10 @@ end
 
 build_callbacks(c::CurveProblem, n::Nothing) = nothing
 
-function build_callbacks(c::CurveProblem, mdc_callbacks::Vector{T}, mtol::Number) where {T <:
-                                                                                         CallbackCallable}
+function build_callbacks(c::CurveProblem, mdc_callbacks::Vector{T}, mtol::Number) where {
+        T <:
+        CallbackCallable,
+    }
     if !any(x -> x isa MomentumReadjustment, mdc_callbacks)
         push!(mdc_callbacks, MomentumReadjustment(mtol))
     end
@@ -365,15 +372,18 @@ end
 
 function Base.summary(io::IO, prob::MDCProblem)
     type_color, no_color = SciMLBase.get_colorizers(io)
-    print(io,
+    return print(
+        io,
         type_color, nameof(typeof(prob)),
         no_color, " with uType ",
         type_color, typeof(prob.p0),
         no_color, " and tType ",
         type_color,
         prob.tspan isa Function ?
-        "Unknown" : (prob.tspan === nothing ?
-         "Nothing" : typeof(prob.tspan[1])),
+            "Unknown" : (
+                prob.tspan === nothing ?
+                "Nothing" : typeof(prob.tspan[1])
+            ),
         no_color,
         " holding cost function of type ", type_color, nameof(typeof(prob.cost)), no_color
     )
@@ -386,5 +396,5 @@ function Base.show(io::IO, mime::MIME"text/plain", A::MDCProblem)
     print(io, "timespan: ", A.tspan, "\n")
     print(io, "momentum: ", A.momentum, "\n")
     print(io, "Initial parameters p0: ", A.p0, "\n")
-    print(io, "Initial parameter direction dp0: ", A.dp0, "\n")
+    return print(io, "Initial parameter direction dp0: ", A.dp0, "\n")
 end

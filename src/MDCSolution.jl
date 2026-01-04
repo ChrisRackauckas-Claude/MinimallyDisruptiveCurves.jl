@@ -29,8 +29,10 @@ end
 returns array view of states and costates of curve at distance t
 """
 function (mdc::MDCSolution)(t::N) where {N <: Number}
-    return (states = (@view mdc.sol(t)[1:mdc.N]),
-        costates = (@view mdc.sol(t)[(mdc.N + 1):end]))
+    return (
+        states = (@view mdc.sol(t)[1:mdc.N]),
+        costates = (@view mdc.sol(t)[(mdc.N + 1):end])
+    )
 end
 
 """
@@ -73,5 +75,5 @@ function cost_trajectory(mdc::MDCSolution, ts)
 end
 
 function Base.show(io::IO, m::MIME"text/plain", M::MDCSolution)
-    show(io, m, M.sol)
+    return show(io, m, M.sol)
 end

@@ -1,4 +1,3 @@
-
 struct TransformationStructure{T <: Function, U <: Function}
     name::Union{String, Nothing}
     p_transform::T
@@ -77,7 +76,8 @@ end
 Given a cost function C(p), makes a new differentiable cost function D(q), where q = tr(p) and D(q) = C(p)
 """
 function transform_cost(
-        cost, p0, tr::TransformationStructure; unames = nothing, pnames = nothing)
+        cost, p0, tr::TransformationStructure; unames = nothing, pnames = nothing
+    )
     newp0 = tr.p_transform(p0)
     jac = ForwardDiff.jacobian
 
@@ -130,8 +130,10 @@ function transform_ODESystem(od::ModelingToolkit.AbstractSystem, tr::Transformat
         end
     end
 
-    de = ODESystem(lhs .~ rhs, t, unames, new_ps, defaults = _defaults,
-        checks = false, name = nameof(od))
+    de = ODESystem(
+        lhs .~ rhs, t, unames, new_ps, defaults = _defaults,
+        checks = false, name = nameof(od)
+    )
     return de # (vars .=> last.(ic)), (new_ps .=> newp0)
 end
 
@@ -153,18 +155,22 @@ function transform_problem(prob::ODEProblem, tr::TransformationStructure; unames
     end
 
     if !(unames === nothing)
-        neweqs = [substitute(el.lhs, uname_tr) ~ substitute(el.rhs, uname_tr)
-                  for el in neweqs]
+        neweqs = [
+            substitute(el.lhs, uname_tr) ~ substitute(el.rhs, uname_tr)
+                for el in neweqs
+        ]
     else
         unames = ModelingToolkit.unknowns(sys)
     end
-    named_sys = ODESystem(neweqs, ModelingToolkit.get_iv(sys), unames, pnames,
+    named_sys = ODESystem(
+        neweqs, ModelingToolkit.get_iv(sys), unames, pnames,
         defaults = merge(Dict(unames .=> prob.u0), Dict(pnames .=> prob.p)),
-        name = nameof(sys))
+        name = nameof(sys)
+    )
     newp0 = tr.p_transform(prob.p)
     t_sys = transform_ODESystem(named_sys, tr)
     return t_sys, (ModelingToolkit.unknowns(t_sys) .=> prob.u0),
-    (ModelingToolkit.get_ps(t_sys) .=> newp0)
+        (ModelingToolkit.get_ps(t_sys) .=> newp0)
 end
 
 """

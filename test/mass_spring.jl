@@ -11,7 +11,7 @@ function simple_cost(p)
     # Rosenbrock-like function modified to have minimum at p0
     a = 1.0
     b = 100.0
-    sum((a .- p) .^ 2) + sum(b .* (p[2:end] .- p[1:(end - 1)] .^ 2) .^ 2)
+    return sum((a .- p) .^ 2) + sum(b .* (p[2:end] .- p[1:(end - 1)] .^ 2) .^ 2)
 end
 
 function simple_cost_grad!(p, g)
@@ -19,7 +19,7 @@ function simple_cost_grad!(p, g)
     a = 1.0
     b = 100.0
     # Simple finite-difference for gradient to avoid allocation issues
-    ε = 1e-8
+    ε = 1.0e-8
     for i in 1:n
         p_plus = copy(p)
         p_plus[i] += ε
@@ -94,7 +94,7 @@ end
 Test with different callback configuration
 """
 cb2 = [
-    Verbose([CurveDistance(0.1:0.3:1.0)])
+    Verbose([CurveDistance(0.1:0.3:1.0)]),
 ]
 @time mdc2 = evolve(eprob, Tsit5; mdc_callback = cb2)
 

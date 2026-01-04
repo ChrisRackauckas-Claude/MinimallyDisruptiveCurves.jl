@@ -12,13 +12,15 @@ struct MDCProblemJumpStart{A, B, C, D, E, F} <: CurveProblem
     jumpsize::F
     reinitialise_dp0::Bool
     ## reverse initial direction and signflip curve span if the latter is nonpositive
-    function MDCProblemJumpStart(a::A, b::B, c::C, d::D, e::E, f::F,
-            g::Bool) where {A} where {B} where {C} where {D} where {E} where {F}
+    function MDCProblemJumpStart(
+            a::A, b::B, c::C, d::D, e::E, f::F,
+            g::Bool
+        ) where {A} where {B} where {C} where {D} where {E} where {F}
         if max(e...) <= 0.0
             e = map(x -> -x |> abs, e) |> reverse
             c = -c
         end
-        new{A, B, C, D, E, F}(a, b, c, d, e, f, g)
+        return new{A, B, C, D, E, F}(a, b, c, d, e, f, g)
     end
 end
 isjumped(c::MDCProblemJumpStart) = JumpStart(c.jumpsize)
@@ -26,20 +28,24 @@ whatdynamics(c::MDCProblemJumpStart) = MDCDynamics()
 
 function jumpstart(m::MDCProblem, jumpsize, reinitialise_dp0 = false)
     return MDCProblemJumpStart(
-        m.cost, m.p0, m.dp0, m.momentum, m.tspan, jumpsize, reinitialise_dp0)
+        m.cost, m.p0, m.dp0, m.momentum, m.tspan, jumpsize, reinitialise_dp0
+    )
 end
 
 function (j::JumpStart)(m::MDCProblem; reinitialise_dp0 = false)
     return MDCProblemJumpStart(
-        m.cost, m.p0, m.dp0, m.momentum, m.tspan, j.jumpsize, reinitialise_dp0)
+        m.cost, m.p0, m.dp0, m.momentum, m.tspan, j.jumpsize, reinitialise_dp0
+    )
 end
 
 function (c::MDCProblemJumpStart)()
     spans = make_spans(c, c.tspan, ZeroStart())
     cs = map(spans) do span
         mult = sign(span[end])
-        return MDCProblemJumpStart(c.cost, c.p0, mult * c.dp0, c.momentum,
-            abs.(span), c.jumpsize, c.reinitialise_dp0)
+        return MDCProblemJumpStart(
+            c.cost, c.p0, mult * c.dp0, c.momentum,
+            abs.(span), c.jumpsize, c.reinitialise_dp0
+        )
     end
     spans = map(x -> abs.(x), spans)
     u0s = initial_conditions.(cs)
@@ -68,7 +74,7 @@ function initial_conditions(c::MDCProblemJumpStart)
 end
 
 function get_jump(c::CurveProblem)
-    get_jump(c, isjumped(c))
+    return get_jump(c, isjumped(c))
 end
 get_jump(c, ::ZeroStart) = zero.(param_template(c))
 function get_jump(c, j::JumpStart)
@@ -120,12 +126,12 @@ function get_initial_velocity(c::MDCProblemJumpStart)
     c.cost(new_p0, ∇C)
     d = dot(∇C, y)
     if d ≤ 0
-        new_dp0 = -∇C/(norm(∇C))
+        new_dp0 = -∇C / (norm(∇C))
     else
         μ₂ = dot(∇C, y) / sum(abs2, y)
-        x = μ₂*y - ∇C;
+        x = μ₂ * y - ∇C
         nx = norm(x)
-        new_dp0 = x/nx
+        new_dp0 = x / nx
     end
     if c.cost(new_p0 + 0.001new_dp0) > c.cost(new_p0 + 0.001c.dp0)
         @info("couldn't cheaply find a better initial curve direction dp0 for the jumpstarted problem. will not reinitialise dp0. Provide your own if you want")

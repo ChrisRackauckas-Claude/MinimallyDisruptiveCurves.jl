@@ -49,13 +49,15 @@ end
     @testset "Dynamics hot path - type stability" begin
         # The dynamics function is the most critical hot path
         rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) f(
-            du, u0, nothing, 0.0)
+            du, u0, nothing, 0.0
+        )
         @test isempty(JET.get_reports(rep))
     end
 
     @testset "Dynamics hot path - no runtime errors" begin
         rep = JET.@report_call target_modules = (MinimallyDisruptiveCurves,) f(
-            du, u0, nothing, 0.0)
+            du, u0, nothing, 0.0
+        )
         @test isempty(JET.get_reports(rep))
     end
 
@@ -71,19 +73,22 @@ end
 
     @testset "initial_costate - type stability" begin
         rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) MinimallyDisruptiveCurves.initial_costate(
-            mdc)
+            mdc
+        )
         @test isempty(JET.get_reports(rep))
     end
 
     @testset "initial_conditions - type stability" begin
         rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) MinimallyDisruptiveCurves.initial_conditions(
-            mdc)
+            mdc
+        )
         @test isempty(JET.get_reports(rep))
     end
 
     @testset "soft_heaviside - type stability" begin
         rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) soft_heaviside(
-            0.5, 0.1, 0.3)
+            0.5, 0.1, 0.3
+        )
         @test isempty(JET.get_reports(rep))
     end
 end
