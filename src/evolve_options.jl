@@ -66,12 +66,12 @@ end
 
 function (c::CurveDistance)(cp::CurveProblem, u, t, integ)
     @info "curve length is $t"
-    nothing
+    return nothing
 end
 
 function (h::HamiltonianResidual)(c::CurveProblem, u, t, integ)
     x = dHdu_residual(c, u, t, nothing)
-    @info "dHdu residual = $x at curve length $t"
+    return @info "dHdu residual = $x at curve length $t"
 end
 
 (e::EmptyInfo)(c, u, t, integ) = nothing

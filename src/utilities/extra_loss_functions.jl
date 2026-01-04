@@ -13,8 +13,10 @@ with output map g(x), this turns into
 
 int_u  sum(dgdx(u)*pprob.f(u) - dgdx(u)*prob.f(u)).^2
 """
-function build_injection_loss(prob::ODEProblem, solmethod::T, tpoints,
-        output_map = x -> x) where {T <: SciMLBase.AbstractODEAlgorithm}
+function build_injection_loss(
+        prob::ODEProblem, solmethod::T, tpoints,
+        output_map = x -> x
+    ) where {T <: SciMLBase.AbstractODEAlgorithm}
     pdim = length(prob.u0)
     nom_sol = Array(solve(prob, solmethod, saveat = tpoints))
     n = length(tpoints)
@@ -31,7 +33,7 @@ function build_injection_loss(prob::ODEProblem, solmethod::T, tpoints,
             prob.f(du_nom, nom_sol[:, i], prob.p, tpoints[i])
             pprob.f(du_p, nom_sol[:, i], p, tpoints[i])
             dgdx_template = dgdx(nom_sol[:, i])
-            c += sum(abs2, dgdx_template*du_nom .- dgdx_template*du_p)
+            c += sum(abs2, dgdx_template * du_nom .- dgdx_template * du_p)
         end
         return c
     end
