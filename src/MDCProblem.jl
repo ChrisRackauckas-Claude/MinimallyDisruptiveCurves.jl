@@ -23,7 +23,7 @@ end
 isjumped(c::MDCProblem) = ZeroStart()
 whatdynamics(c::MDCProblem) = MDCDynamics()
 
-num_params(c::CurveProblem) = length(c.p0)
+num_params(c::CurveProblem)::Int = length(c.p0)
 param_template(c::CurveProblem) = deepcopy(c.p0)
 initial_params(c::CurveProblem) = c.p0
 
@@ -301,43 +301,14 @@ resets state so that residual is zero. also resets costate necessarily. NOT YET 
 min C(θ) such that norm(θ - θ₀)^2 = K where K is current distance
 we will do this with unconstrained optimisation and lagrange multipliers
 ideally would have an inequality constraint >=K. But Optim.jl doesn't support this
+
+!!! warning "Not Implemented"
+    StateReadjustment is experimental and not yet fully implemented. It requires Optim.jl
+    which is not included as a dependency. Use MomentumReadjustment instead.
 """
 function build_affect(c::CurveProblem, ::StateAffect, ::MDCDynamics)
-    N = num_params(c)
-    H = c.momentum
-    cost = c.cost
-    θ₀ = initial_params(c)
-    dp = param_template(c)
-    _reset_costate! = build_affect(c, CostateAffect())
-    function reset_state!(integ, dθ)
-        K = sum((integ.u[1:N] - θ₀) .^ 2)
-        println(K)
-        function constr(x) # constraint func: g = 0
-            return K - sum((x - θ₀) .^ 2)
-        end
-
-        function L(x)
-            θ, λ = x[1:(end - 1)], x[end]
-            return cost(θ) + λ * constr(θ)
-        end
-        gc = deepcopy(θ₀)
-        function L(x, g)
-            θ, λ = x[1:(end - 1)], x[end]
-            C = cost(θ, dθ) # dθ is just an arbitrary pre-allocation
-            cstr = constr(θ)
-            g[1:(end - 1)] = gc + 2 * λ * (θ - θ₀)
-            g[end] = cstr
-            return C + λ * cstr
-        end
-        g = zeros(N + 1)
-        opt = optimize(L, cat(integ.u[1:N], 0.0, dims = 1), LBFGS())
-        C0 = cost(θ₀)
-        @info "cost after readjustment is $(opt.minimum). cost before readjustment was $C0"
-        (opt.ls_success == true) && (integ.u[1:N] = opt.minimizer[1:N])
-        integ = _reset_costate!(integ, dθ)
-        return integ
-    end
-    return integ -> reset_state!(integ, dp)
+    error("StateReadjustment is not yet fully implemented. It requires Optim.jl which is not " *
+        "included as a dependency. Use MomentumReadjustment instead.")
 end
 
 function saving_callback(prob::ODEProblem, saved_values::SavedValues)

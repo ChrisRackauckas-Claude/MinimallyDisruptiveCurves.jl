@@ -1,8 +1,19 @@
 """
-makes a soft analogue of the heaviside step function. useful for inputs to differential equations, as it's easier on the numerics.
+    soft_heaviside(t::Real, nastiness::Real, step_time::Real) -> Real
+
+Makes a soft analogue of the heaviside step function. Useful for inputs to
+differential equations, as it's easier on the numerics.
 """
-soft_heaviside(t, nastiness, step_time) = 1 / (1 + exp(nastiness * (step_time - t)))
-soft_heaviside(nastiness, step_time) = t -> soft_heaviside(t, nastiness, step_time)
+function soft_heaviside(t::Real, nastiness::Real, step_time::Real)
+    return 1 / (1 + exp(nastiness * (step_time - t)))
+end
+
+"""
+    soft_heaviside(nastiness::Real, step_time::Real) -> Function
+
+Returns a closure that computes `soft_heaviside(t, nastiness, step_time)`.
+"""
+soft_heaviside(nastiness::Real, step_time::Real) = t -> soft_heaviside(t, nastiness, step_time)
 
 get_ids_names(opArray) = repr.(opArray)
 

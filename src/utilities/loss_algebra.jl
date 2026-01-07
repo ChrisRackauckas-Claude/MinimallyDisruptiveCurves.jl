@@ -46,9 +46,6 @@ function sum_losses(lArray::Array{T, 1}, p0) where {T <: Function}
     end
     n = length(lArray)
     cs = Vector{Float64}(undef, n)
-    pure_costs = map(lArray) do el
-        (p, g) -> (el[i](p, g), g)
-    end
 
     function cost2(p, g)
         ThreadsX.foreach(enumerate(lArray)) do (i, el)

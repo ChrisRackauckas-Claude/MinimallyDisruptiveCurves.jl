@@ -91,4 +91,25 @@ end
         )
         @test isempty(JET.get_reports(rep))
     end
+
+    @testset "num_params - type stability" begin
+        rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) MinimallyDisruptiveCurves.num_params(
+            mdc
+        )
+        @test isempty(JET.get_reports(rep))
+    end
+
+    @testset "param_template - type stability" begin
+        rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) MinimallyDisruptiveCurves.param_template(
+            mdc
+        )
+        @test isempty(JET.get_reports(rep))
+    end
+
+    @testset "initial_params - type stability" begin
+        rep = JET.@report_opt target_modules = (MinimallyDisruptiveCurves,) MinimallyDisruptiveCurves.initial_params(
+            mdc
+        )
+        @test isempty(JET.get_reports(rep))
+    end
 end
