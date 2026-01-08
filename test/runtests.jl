@@ -23,8 +23,19 @@ const GROUP = get(ENV, "GROUP", "All")
     end
 
     if GROUP == "All" || GROUP == "JET"
-        @testset "JET Static Analysis" begin
-            include("jet_tests.jl")
+        # JET tests are optional - skip if JET can't be loaded (e.g., on pre-release Julia)
+        jet_available = try
+            @eval using JET
+            true
+        catch
+            false
+        end
+        if jet_available
+            @testset "JET Static Analysis" begin
+                include("jet_tests.jl")
+            end
+        else
+            @info "Skipping JET tests - JET.jl not available on this Julia version"
         end
     end
 end
