@@ -22,7 +22,7 @@ const GROUP = get(ENV, "GROUP", "All")
         end
     end
 
-    if GROUP == "All" || GROUP == "JET"
+    if GROUP == "All" || GROUP == "nopre" || GROUP == "JET"
         @testset "JET Static Analysis" begin
             include("jet_tests.jl")
         end
